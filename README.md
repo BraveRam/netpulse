@@ -31,6 +31,40 @@ TCP handshake probes provide a periodically cached latency estimate for establis
 
 **Requirements:** Linux, Go 1.25 or newer, and a terminal. A wide terminal works best for the full connection table.
 
+### Install with Go
+
+```bash
+go install github.com/BraveRam/netpulse/cmd/netpulse@latest
+netpulse
+```
+
+If `netpulse` is not found, add Go's binary directory to your `PATH`:
+
+```bash
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+Add that line to your shell profile to keep it across terminal sessions. If you set a custom `GOBIN`, use that directory instead.
+
+Start as your normal user to inspect available sockets and process metadata. Access to other users' process details depends on `/proc` permissions.
+
+For live DNS capture and broader process visibility:
+
+```bash
+sudo "$(go env GOPATH)/bin/netpulse"
+```
+
+To enable packet capture without running the interface as root:
+
+```bash
+sudo setcap cap_net_raw+ep "$(go env GOPATH)/bin/netpulse"
+netpulse
+```
+
+Use your `GOBIN` path in these commands if configured. Reinstalling replaces the binary, so capabilities may need to be granted again. This capability enables capture; it does not grant permission to terminate another user's processes.
+
+### Build from source
+
 ```bash
 git clone https://github.com/BraveRam/netpulse.git
 cd netpulse
@@ -38,22 +72,7 @@ make build
 ./bin/netpulse
 ```
 
-Start as your normal user to inspect available sockets and process metadata. Access to other users' process details depends on `/proc` permissions.
-
-For live DNS capture and broader process visibility:
-
-```bash
-sudo ./bin/netpulse
-```
-
-To enable packet capture without running the interface as root, grant the built binary the raw socket capability:
-
-```bash
-sudo setcap cap_net_raw+ep ./bin/netpulse
-./bin/netpulse
-```
-
-Rebuilding replaces the binary, so capabilities may need to be granted again. This capability enables capture; it does not grant permission to terminate another user's processes.
+For a source build, use `sudo ./bin/netpulse` for privileged execution, or apply `setcap` to `./bin/netpulse`.
 
 ## Controls
 
@@ -80,13 +99,13 @@ Filters match process names, PIDs, IP addresses, domains, ports, organizations, 
 
 ```bash
 # Refresh twice per second with the Nord theme
-./bin/netpulse -interval 500ms -theme nord
+netpulse -interval 500ms -theme nord
 
 # Run without DNS packet capture
-./bin/netpulse -dns=false
+netpulse -dns=false
 
 # Use a locally obtained MaxMind City or Country database
-./bin/netpulse -geoip /path/to/GeoLite2-City.mmdb
+netpulse -geoip /path/to/GeoLite2-City.mmdb
 ```
 
 | Flag | Default | Purpose |
