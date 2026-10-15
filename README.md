@@ -144,3 +144,7 @@ For a small stream of local and outbound demo traffic:
 ```
 
 The implementation uses [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss), and [MaxMind DB Reader](https://github.com/oschwald/maxminddb-golang).
+
+## License
+
+[MIT](LICENSE). Free to use, modify, and distribute under the license terms.
