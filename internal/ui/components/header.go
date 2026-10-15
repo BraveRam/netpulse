@@ -24,15 +24,15 @@ func RenderHeader(styles *theme.Styles, stats *model.BandwidthStats, width int, 
 	titleGroup := fmt.Sprintf("%s %s", pulseIcon, hostBadge)
 
 	// Sockets summary badges
-	var total, estab, listen, wait, udp int
+	var total, estab, listen, other, udp int
 	if stats != nil {
 		total = stats.TotalConnections
 		estab = stats.ActiveEstablished
 		listen = stats.ActiveListen
 		udp = stats.ActiveUDP
-		wait = stats.TotalConnections - (estab + listen + udp)
-		if wait < 0 {
-			wait = 0
+		other = stats.TotalConnections - (estab + listen + udp)
+		if other < 0 {
+			other = 0
 		}
 	}
 
@@ -44,7 +44,8 @@ func RenderHeader(styles *theme.Styles, stats *model.BandwidthStats, width int, 
 	estabBadge := badgeStyle.Background(p.Surface).Foreground(p.Success).Render(fmt.Sprintf("ESTAB %d", estab))
 	listenBadge := badgeStyle.Background(p.Surface).Foreground(p.Primary).Render(fmt.Sprintf("LISTEN %d", listen))
 	udpBadge := badgeStyle.Background(p.Surface).Foreground(p.Secondary).Render(fmt.Sprintf("UDP %d", udp))
-	statsGroup := fmt.Sprintf("%s %s %s %s", totalBadge, estabBadge, listenBadge, udpBadge)
+	otherBadge := badgeStyle.Background(p.Surface).Foreground(p.TextMuted).Render(fmt.Sprintf("OTHER %d", other))
+	statsGroup := fmt.Sprintf("%s %s %s %s %s", totalBadge, estabBadge, listenBadge, udpBadge, otherBadge)
 
 	// Bandwidth sparklines
 	var rxRateStr, txRateStr, rxSpark, txSpark string

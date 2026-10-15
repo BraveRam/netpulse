@@ -74,6 +74,8 @@ make build
 
 For a source build, use `sudo ./bin/netpulse` for privileged execution, or apply `setcap` to `./bin/netpulse`.
 
+The header groups sockets into established TCP (`ESTAB`), listening TCP (`LISTEN`), all UDP (`UDP`), and remaining sockets (`OTHER`). These four counts add up to `TOTAL`.
+
 ## Controls
 
 | Key | Action |

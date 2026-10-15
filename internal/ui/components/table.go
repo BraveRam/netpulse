@@ -7,6 +7,7 @@ import (
 	"github.com/BraveRam/netpulse/internal/model"
 	"github.com/BraveRam/netpulse/internal/ui/theme"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // TableView renders the primary Connections Radar table with scrolling and highlighting.
@@ -89,43 +90,28 @@ func (t *TableView) Render(styles *theme.Styles, conns []*model.Connection, widt
 		t.Offset = t.Cursor - visibleRows + 1
 	}
 
-	// Calculate column widths dynamically based on terminal width
-	// Base widths: Flag: 9, Process: 18, Remote: 26, Org: 22, State: 13, Latency: 10, Traffic: 12
-	colFlag := 9
-	colState := 13
-	colLatency := 10
-	colTraffic := 12
-
-	remaining := width - (colFlag + colState + colLatency + colTraffic + 6) // margins
-	if remaining < 40 {
-		remaining = 40
+	// Reserve display cells for fixed columns, the cursor, and six separators.
+	// Divide the rest without imposing minimums that would wrap terminal rows.
+	colFlag, colState, colLatency, colTraffic := 8, 11, 9, 10
+	remaining := width - (colFlag + colState + colLatency + colTraffic + 8)
+	if remaining < 0 {
+		remaining = 0
 	}
 	colProcess := remaining * 25 / 100
-	if colProcess < 14 {
-		colProcess = 14
-	}
 	colRemote := remaining * 45 / 100
-	if colRemote < 20 {
-		colRemote = 20
-	}
 	colOrg := remaining - colProcess - colRemote
-	if colOrg < 14 {
-		colOrg = 14
+	columns := []int{colFlag, colProcess, colRemote, colOrg, colState, colLatency, colTraffic}
+	formatRow := func(prefix string, cells ...string) string {
+		for i := range cells {
+			cells[i] = fitTableCell(cells[i], columns[i])
+		}
+		return ansi.Truncate(prefix+strings.Join(cells, " "), width, "")
 	}
 
 	var sb strings.Builder
 
 	// Header
-	headerStr := fmt.Sprintf(
-		"  %-*s %-*s %-*s %-*s %-*s %-*s %-*s",
-		colFlag, "FLAG",
-		colProcess, "PROCESS",
-		colRemote, "REMOTE ENDPOINT",
-		colOrg, "ORG / ASN",
-		colState, "STATE",
-		colLatency, "LATENCY",
-		colTraffic, "TRAFFIC",
-	)
+	headerStr := formatRow("  ", "FLAG", "PROCESS", "REMOTE ENDPOINT", "ORG / ASN", "STATE", "LATENCY", "TRAFFIC")
 	sb.WriteString(styles.TableHeader.Width(width).Render(headerStr))
 	sb.WriteString("\n")
 
@@ -141,21 +127,9 @@ func (t *TableView) Render(styles *theme.Styles, conns []*model.Connection, widt
 
 		// Flag & Country
 		flagStr := fmt.Sprintf("%s %-2s", c.FlagEmoji, c.CountryCode)
-		if len(flagStr) > colFlag {
-			flagStr = flagStr[:colFlag]
-		}
 
-		// Process
 		procStr := c.ProcessDisplay()
-		if len(procStr) > colProcess {
-			procStr = procStr[:colProcess-1] + "…"
-		}
-
-		// Remote Endpoint
 		remoteStr := c.RemoteEndpoint()
-		if len(remoteStr) > colRemote {
-			remoteStr = remoteStr[:colRemote-1] + "…"
-		}
 
 		// Org / ASN
 		orgStr := c.ASOrg
@@ -164,9 +138,6 @@ func (t *TableView) Render(styles *theme.Styles, conns []*model.Connection, widt
 		}
 		if orgStr == "" {
 			orgStr = "-"
-		}
-		if len(orgStr) > colOrg {
-			orgStr = orgStr[:colOrg-1] + "…"
 		}
 
 		// State
@@ -186,17 +157,7 @@ func (t *TableView) Render(styles *theme.Styles, conns []*model.Connection, widt
 			cursorPrefix = "❯ "
 		}
 
-		rowContent := fmt.Sprintf(
-			"%s%-*s %-*s %-*s %-*s %-*s %-*s %-*s",
-			cursorPrefix,
-			colFlag, flagStr,
-			colProcess, procStr,
-			colRemote, remoteStr,
-			colOrg, orgStr,
-			colState, stateStr,
-			colLatency, latencyStr,
-			colTraffic, trafficStr,
-		)
+		rowContent := formatRow(cursorPrefix, flagStr, procStr, remoteStr, orgStr, stateStr, latencyStr, trafficStr)
 
 		if isSelected {
 			sb.WriteString(styles.HighlightRow.Width(width).Render(rowContent))
@@ -206,7 +167,7 @@ func (t *TableView) Render(styles *theme.Styles, conns []*model.Connection, widt
 		sb.WriteString("\n")
 	}
 
-	return sb.String()
+	return strings.TrimSuffix(sb.String(), "\n")
 }
 
 func renderStateBadge(styles *theme.Styles, state string) string {
@@ -239,4 +200,14 @@ func renderLatencyBadge(styles *theme.Styles, ms int) string {
 		return styles.LatencyMid.Render(str)
 	}
 	return styles.LatencySlow.Render(str)
+}
+
+// fitTableCell preserves Unicode graphemes and ANSI styles while aligning columns.
+func fitTableCell(value string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	value = strings.NewReplacer("\n", " ", "\r", " ", "\t", " ").Replace(value)
+	value = ansi.Truncate(value, width, "…")
+	return value + strings.Repeat(" ", width-ansi.StringWidth(value))
 }

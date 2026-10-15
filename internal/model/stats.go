@@ -16,8 +16,8 @@ type BandwidthStats struct {
 	// Connection summary counts
 	ActiveTCP         int
 	ActiveUDP         int
-	ActiveListen      int
-	ActiveEstablished int
+	ActiveListen      int // TCP listeners; UDP sockets are counted only in ActiveUDP.
+	ActiveEstablished int // Established TCP sockets.
 	TotalConnections  int
 }
 

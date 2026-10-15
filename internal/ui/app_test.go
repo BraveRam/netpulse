@@ -57,3 +57,23 @@ func TestKillShortcutPinsTargetAcrossRefresh(t *testing.T) {
 		t.Fatal("confirmation did not close the dialog")
 	}
 }
+
+func TestSummaryCountsAreDisjoint(t *testing.T) {
+	m := NewAppModel(Config{})
+	defer m.enricher.Close()
+	defer m.sniffer.Stop()
+	m.collector = reviewCollector{[]*model.Connection{
+		{Protocol: "tcp", State: "ESTABLISHED"},
+		{Protocol: "tcp6", State: "LISTEN"},
+		{Protocol: "tcp", State: "TIME_WAIT"},
+		{Protocol: "udp", State: "LISTEN"},
+		{Protocol: "udp", State: "ESTABLISHED"},
+		{Protocol: "udp6", State: "LISTEN"},
+		{Protocol: "other", State: "ESTABLISHED"},
+	}}
+	m.refreshData()
+	s := m.stats
+	if s.TotalConnections != 7 || s.ActiveTCP != 3 || s.ActiveUDP != 3 || s.ActiveEstablished != 1 || s.ActiveListen != 1 {
+		t.Fatalf("overlapping or incorrect counts: %+v", s)
+	}
+}

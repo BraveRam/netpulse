@@ -298,13 +298,13 @@ func (m *AppModel) refreshData() {
 		for _, c := range m.connections {
 			if strings.HasPrefix(c.Protocol, "tcp") {
 				tcp++
+				if c.State == "ESTABLISHED" {
+					estab++
+				} else if c.State == "LISTEN" {
+					listen++
+				}
 			} else if strings.HasPrefix(c.Protocol, "udp") {
 				udp++
-			}
-			if c.State == "ESTABLISHED" {
-				estab++
-			} else if c.State == "LISTEN" {
-				listen++
 			}
 		}
 		bwStats.TotalConnections = len(m.connections)
