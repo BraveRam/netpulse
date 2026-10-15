@@ -5,18 +5,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BraveRam/netpulse/internal/collector"
+	"github.com/BraveRam/netpulse/internal/dns"
+	"github.com/BraveRam/netpulse/internal/enricher"
+	"github.com/BraveRam/netpulse/internal/killer"
+	"github.com/BraveRam/netpulse/internal/latency"
+	"github.com/BraveRam/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/ui/components"
+	"github.com/BraveRam/netpulse/internal/ui/theme"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/plxor/netpulse/internal/collector"
-	"github.com/plxor/netpulse/internal/dns"
-	"github.com/plxor/netpulse/internal/enricher"
-	"github.com/plxor/netpulse/internal/killer"
-	"github.com/plxor/netpulse/internal/latency"
-	"github.com/plxor/netpulse/internal/model"
-	"github.com/plxor/netpulse/internal/ui/components"
-	"github.com/plxor/netpulse/internal/ui/theme"
 )
 
 type ViewMode int
@@ -49,14 +49,19 @@ var sortModeNames = []string{
 // TickMsg signals the UI update loop to collect fresh network metrics.
 type TickMsg time.Time
 
+type processKiller interface {
+	KillProcess(pid int, procName string, force bool) killer.Result
+}
+
 // AppModel is the primary Bubble Tea model managing netpulse TUI state.
 type AppModel struct {
+	killTarget    *model.Connection
 	mode          ViewMode
 	collector     collector.Collector
 	enricher      *enricher.Enricher
 	prober        *latency.LatencyProber
 	sniffer       *dns.Sniffer
-	killer        *killer.Killer
+	killer        processKiller
 	themeIndex    int
 	styles        *theme.Styles
 	keys          KeyMap
@@ -175,7 +180,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case ViewKill:
-			selected := m.selectedConnection()
+			selected := m.killTarget
 			switch msg.String() {
 			case "y":
 				if selected != nil {
@@ -253,7 +258,9 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case key.Matches(msg, m.keys.Kill):
-				if m.selectedConnection() != nil {
+				if selected := m.selectedConnection(); selected != nil {
+					target := *selected
+					m.killTarget = &target
 					m.mode = ViewKill
 				}
 
@@ -408,7 +415,7 @@ func (m *AppModel) View() string {
 	case ViewDetails:
 		bodyView = components.RenderDetailsModal(m.styles, m.selectedConnection(), w, bodyHeight)
 	case ViewKill:
-		bodyView = components.RenderKillModal(m.styles, m.selectedConnection(), w, bodyHeight)
+		bodyView = components.RenderKillModal(m.styles, m.killTarget, w, bodyHeight)
 	default:
 		// Normal or Filter mode
 		if m.dnsPaneOpen {

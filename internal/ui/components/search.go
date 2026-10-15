@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BraveRam/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/ui/theme"
 	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/plxor/netpulse/internal/model"
-	"github.com/plxor/netpulse/internal/ui/theme"
 )
 
 // SearchBar wraps textinput.Model for live filtering.

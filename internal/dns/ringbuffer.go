@@ -3,7 +3,7 @@ package dns
 import (
 	"sync"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 // RingBuffer stores a fixed-capacity history of DNS queries.

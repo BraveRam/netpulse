@@ -1,27 +1,27 @@
 package latency
 
 import (
-	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 // RTTRecord stores measured latency and expiry.
 type RTTRecord struct {
-	LatencyMs int
+	LatencyMs  int
 	MeasuredAt time.Time
 }
 
 // LatencyProber measures active TCP handshake latency to remote endpoints with TTL caching.
 type LatencyProber struct {
-	mu         sync.RWMutex
-	cache      map[string]*RTTRecord
-	inFlight   map[string]bool
-	cacheTTL   time.Duration
-	sem        chan struct{} // Concurrency limiter
+	mu       sync.RWMutex
+	cache    map[string]*RTTRecord
+	inFlight map[string]bool
+	cacheTTL time.Duration
+	sem      chan struct{} // Concurrency limiter
 }
 
 // NewLatencyProber creates a LatencyProber.
@@ -44,7 +44,7 @@ func NewLatencyProber(cacheTTL time.Duration, maxConcurrency int) *LatencyProber
 // Probe returns the cached latency in ms, or -1 if not yet measured or unavailable.
 // If not cached or expired, it triggers an async probe.
 func (p *LatencyProber) Probe(conn *model.Connection) int {
-	if conn == nil || conn.State == "LISTEN" || conn.RemotePort == 0 || conn.RemoteIP == nil {
+	if conn == nil || (conn.Protocol != "tcp" && conn.Protocol != "tcp6") || conn.State == "LISTEN" || conn.RemotePort == 0 || conn.RemoteIP == nil {
 		return -1
 	}
 
@@ -53,7 +53,7 @@ func (p *LatencyProber) Probe(conn *model.Connection) int {
 		return 0
 	}
 
-	target := fmt.Sprintf("%s:%d", conn.RemoteIPStr, conn.RemotePort)
+	target := net.JoinHostPort(conn.RemoteIPStr, strconv.Itoa(conn.RemotePort))
 
 	p.mu.RLock()
 	record, found := p.cache[target]

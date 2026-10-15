@@ -3,6 +3,8 @@ package enricher
 import (
 	"net"
 	"os"
+
+	"github.com/oschwald/maxminddb-golang"
 )
 
 // GeoIPInfo holds geographic metadata for an IP.
@@ -17,6 +19,7 @@ type GeoIPInfo struct {
 // GeoIPResolver resolves geographic location for IP addresses.
 type GeoIPResolver struct {
 	dbPath string
+	db     *maxminddb.Reader
 }
 
 // NewGeoIPResolver creates a GeoIPResolver.
@@ -38,9 +41,11 @@ func NewGeoIPResolver(customDBPath string) *GeoIPResolver {
 		}
 	}
 
-	return &GeoIPResolver{
-		dbPath: dbPath,
+	g := &GeoIPResolver{dbPath: dbPath}
+	if dbPath != "" {
+		g.db, _ = maxminddb.Open(dbPath)
 	}
+	return g
 }
 
 // Resolve looks up country, city, and flag for an IP.
@@ -61,6 +66,26 @@ func (g *GeoIPResolver) Resolve(ip net.IP) *GeoIPInfo {
 			City:        "LAN",
 			FlagEmoji:   CountryToFlag("LOCAL"),
 			IsLocal:     true,
+		}
+	}
+
+	if g.db != nil {
+		var record struct {
+			Country struct {
+				Code  string            `maxminddb:"iso_code"`
+				Names map[string]string `maxminddb:"names"`
+			} `maxminddb:"country"`
+			City struct {
+				Names map[string]string `maxminddb:"names"`
+			} `maxminddb:"city"`
+		}
+		if err := g.db.Lookup(ip, &record); err == nil && record.Country.Code != "" {
+			return &GeoIPInfo{
+				CountryCode: record.Country.Code,
+				CountryName: record.Country.Names["en"],
+				City:        record.City.Names["en"],
+				FlagEmoji:   CountryToFlag(record.Country.Code),
+			}
 		}
 	}
 
@@ -112,4 +137,11 @@ func isLocalOrPrivate(ip net.IP) bool {
 	}
 
 	return false
+}
+
+// Close releases the memory-mapped database.
+func (g *GeoIPResolver) Close() {
+	if g.db != nil {
+		_ = g.db.Close()
+	}
 }

@@ -4,36 +4,36 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BraveRam/netpulse/internal/ui/theme"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/plxor/netpulse/internal/ui/theme"
 )
 
 // KeyMap defines the keybindings for netpulse.
 type KeyMap struct {
-	Up          key.Binding
-	Down        key.Binding
-	PageUp      key.Binding
-	PageDown    key.Binding
-	Home        key.Binding
-	End         key.Binding
-	Inspect     key.Binding
-	Filter      key.Binding
-	ToggleDNS   key.Binding
-	Sort        key.Binding
-	Theme       key.Binding
-	Pause       key.Binding
-	Kill        key.Binding
-	Cancel      key.Binding
-	Quit        key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	PageUp    key.Binding
+	PageDown  key.Binding
+	Home      key.Binding
+	End       key.Binding
+	Inspect   key.Binding
+	Filter    key.Binding
+	ToggleDNS key.Binding
+	Sort      key.Binding
+	Theme     key.Binding
+	Pause     key.Binding
+	Kill      key.Binding
+	Cancel    key.Binding
+	Quit      key.Binding
 }
 
 // DefaultKeyMap returns the standard key bindings.
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Up: key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "up"),
+			key.WithKeys("up"),
+			key.WithHelp("↑", "up"),
 		),
 		Down: key.NewBinding(
 			key.WithKeys("down", "j"),

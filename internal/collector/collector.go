@@ -3,7 +3,7 @@ package collector
 import (
 	"time"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 // Collector is the high-level interface for acquiring live socket and bandwidth metrics.

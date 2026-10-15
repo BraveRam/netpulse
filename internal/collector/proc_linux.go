@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 // LinuxSocketParser parses /proc/net/tcp, /proc/net/tcp6, /proc/net/udp, /proc/net/udp6.
@@ -107,15 +107,16 @@ func (p *LinuxSocketParser) parseFile(filePath, proto, family string) ([]*model.
 
 		inode, _ := strconv.ParseUint(fields[9], 10, 64)
 
-		stateStr := model.TCPStates[uint8(stateCode)]
-		if stateStr == "" {
-			if strings.HasPrefix(proto, "udp") {
-				if remoteIP.IsUnspecified() || remotePort == 0 {
-					stateStr = "LISTEN"
-				} else {
-					stateStr = "ESTABLISHED"
-				}
+		var stateStr string
+		if strings.HasPrefix(proto, "udp") {
+			if remoteIP.IsUnspecified() || remotePort == 0 {
+				stateStr = "LISTEN"
 			} else {
+				stateStr = "ESTABLISHED"
+			}
+		} else {
+			stateStr = model.TCPStates[uint8(stateCode)]
+			if stateStr == "" {
 				stateStr = fmt.Sprintf("STATE_%02X", stateCode)
 			}
 		}

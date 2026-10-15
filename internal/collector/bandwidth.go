@@ -8,24 +8,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 const maxHistoryPoints = 25
 
 // BandwidthMonitor tracks global network interface byte rates and history.
 type BandwidthMonitor struct {
-	mu           sync.Mutex
-	lastRxBytes  uint64
-	lastTxBytes  uint64
-	lastTime     time.Time
-	rxHistory    []float64
-	txHistory    []float64
+	mu            sync.Mutex
+	lastRxBytes   uint64
+	lastTxBytes   uint64
+	lastTime      time.Time
+	rxHistory     []float64
+	txHistory     []float64
 	currentRxRate float64
 	currentTxRate float64
-	totalRxBytes uint64
-	totalTxBytes uint64
-	initialized  bool
+	totalRxBytes  uint64
+	totalTxBytes  uint64
+	initialized   bool
 }
 
 // NewBandwidthMonitor creates a BandwidthMonitor.
@@ -99,12 +99,12 @@ func (b *BandwidthMonitor) Update() (*model.BandwidthStats, error) {
 	copy(txCopy, b.txHistory)
 
 	return &model.BandwidthStats{
-		TotalRxBytes:  b.totalRxBytes,
-		TotalTxBytes:  b.totalTxBytes,
-		RateRx:        b.currentRxRate,
-		RateTx:        b.currentTxRate,
-		RxHistory:     rxCopy,
-		TxHistory:     txCopy,
+		TotalRxBytes: b.totalRxBytes,
+		TotalTxBytes: b.totalTxBytes,
+		RateRx:       b.currentRxRate,
+		RateTx:       b.currentTxRate,
+		RxHistory:    rxCopy,
+		TxHistory:    txCopy,
 	}, nil
 }
 

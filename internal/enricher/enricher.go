@@ -4,16 +4,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 // Enricher coordinates all GeoIP, ASN, flag, and reverse DNS enrichment.
 type Enricher struct {
-	mu           sync.Mutex
-	geoIP        *GeoIPResolver
-	asn          *ASNResolver
-	rdns         *RDNSResolver
-	pendingASNs  map[string]bool
+	mu          sync.Mutex
+	geoIP       *GeoIPResolver
+	asn         *ASNResolver
+	rdns        *RDNSResolver
+	pendingASNs map[string]bool
 }
 
 // NewEnricher creates a new coordinated Enricher.
@@ -120,4 +120,5 @@ func (e *Enricher) triggerAsyncASN(c *model.Connection) {
 // Close gracefully terminates background resolver workers.
 func (e *Enricher) Close() {
 	e.rdns.Close()
+	e.geoIP.Close()
 }

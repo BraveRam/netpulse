@@ -1,10 +1,14 @@
 package enricher
 
 import (
+	"github.com/maxmind/mmdbwriter"
+	"github.com/maxmind/mmdbwriter/mmdbtype"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 func TestCountryToFlag(t *testing.T) {
@@ -98,5 +102,70 @@ func TestEnricher(t *testing.T) {
 	}
 	if conn.FlagEmoji == "" {
 		t.Errorf("Expected non-empty flag emoji")
+	}
+}
+
+func TestGeoIPDatabase(t *testing.T) {
+	for _, city := range []bool{false, true} {
+		name := "country"
+		if city {
+			name = "city"
+		}
+		t.Run(name, func(t *testing.T) {
+			tree, err := mmdbwriter.New(mmdbwriter.Options{DatabaseType: "GeoIP2-Test", IPVersion: 6})
+			if err != nil {
+				t.Fatal(err)
+			}
+			record := mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("ET"), "names": mmdbtype.Map{"en": mmdbtype.String("Ethiopia")}}}
+			if city {
+				record["city"] = mmdbtype.Map{"names": mmdbtype.Map{"en": mmdbtype.String("Addis Ababa")}}
+			}
+			for _, cidr := range []string{"8.8.8.0/24", "2001:4860::/32"} {
+				_, network, err := net.ParseCIDR(cidr)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := tree.Insert(network, record); err != nil {
+					t.Fatal(err)
+				}
+			}
+			path := filepath.Join(t.TempDir(), "test.mmdb")
+			file, err := os.Create(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := tree.WriteTo(file); err != nil {
+				file.Close()
+				t.Fatal(err)
+			}
+			if err := file.Close(); err != nil {
+				t.Fatal(err)
+			}
+			resolver := NewGeoIPResolver(path)
+			defer resolver.Close()
+			for _, ip := range []string{"8.8.8.8", "2001:4860::1"} {
+				info := resolver.Resolve(net.ParseIP(ip))
+				if info.CountryCode != "ET" || info.CountryName != "Ethiopia" || info.FlagEmoji != "🇪🇹" {
+					t.Fatalf("database record not resolved: %+v", info)
+				}
+				if city && info.City != "Addis Ababa" {
+					t.Fatalf("city not resolved: %+v", info)
+				}
+			}
+			if info := resolver.Resolve(net.ParseIP("9.9.9.9")); info.CountryCode != "??" {
+				t.Fatalf("unexpected missing-IP result: %+v", info)
+			}
+			if info := resolver.Resolve(net.ParseIP("127.0.0.1")); !info.IsLocal {
+				t.Fatal("local IP no longer classified locally")
+			}
+		})
+	}
+}
+
+func TestGeoIPMissingDatabaseFallsBack(t *testing.T) {
+	resolver := NewGeoIPResolver(filepath.Join(t.TempDir(), "missing.mmdb"))
+	defer resolver.Close()
+	if info := resolver.Resolve(net.ParseIP("8.8.8.8")); info.CountryCode != "??" {
+		t.Fatalf("unexpected fallback: %+v", info)
 	}
 }

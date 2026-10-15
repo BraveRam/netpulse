@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 var typeNames = map[uint16]string{

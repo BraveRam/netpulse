@@ -10,8 +10,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
+
+type transactionKey struct {
+	id                     uint16
+	clientIP, serverIP     string
+	clientPort, serverPort int
+}
 
 // Sniffer captures live DNS queries and answers.
 type Sniffer struct {
@@ -21,7 +27,7 @@ type Sniffer struct {
 	cancel       context.CancelFunc
 	privileged   bool
 	statusMsg    string
-	pendingTimes map[uint16]time.Time
+	pendingTimes map[transactionKey]time.Time
 	sockFD       int
 }
 
@@ -33,7 +39,7 @@ func NewSniffer(bufferCapacity int) *Sniffer {
 		ctx:          ctx,
 		cancel:       cancel,
 		sockFD:       -1,
-		pendingTimes: make(map[uint16]time.Time),
+		pendingTimes: make(map[transactionKey]time.Time),
 	}
 }
 
@@ -100,6 +106,9 @@ func (s *Sniffer) captureLoop() {
 }
 
 func (s *Sniffer) processPacket(data []byte) {
+	if len(data) < 20 {
+		return
+	}
 	// IP Header minimum length is 20 bytes
 	versionIHL := data[0]
 	if (versionIHL >> 4) != 4 {
@@ -107,7 +116,7 @@ func (s *Sniffer) processPacket(data []byte) {
 	}
 
 	ihl := int(versionIHL&0x0F) * 4
-	if len(data) < ihl+8 {
+	if ihl < 20 || len(data) < ihl+8 {
 		return
 	}
 
@@ -143,13 +152,19 @@ func (s *Sniffer) processPacket(data []byte) {
 	query.ServerIP = dstIP
 	query.ServerPort = int(dstPort)
 
+	if query.IsResponse {
+		query.ClientIP, query.ServerIP = query.ServerIP, query.ClientIP
+		query.ClientPort, query.ServerPort = query.ServerPort, query.ClientPort
+	}
+	key := transactionKey{query.ID, query.ClientIP, query.ServerIP, query.ClientPort, query.ServerPort}
+
 	s.mu.Lock()
 	if !query.IsResponse {
-		s.pendingTimes[query.ID] = query.Timestamp
+		s.pendingTimes[key] = query.Timestamp
 	} else {
-		if startTime, ok := s.pendingTimes[query.ID]; ok {
+		if startTime, ok := s.pendingTimes[key]; ok {
 			query.Latency = query.Timestamp.Sub(startTime)
-			delete(s.pendingTimes, query.ID)
+			delete(s.pendingTimes, key)
 		}
 	}
 	s.mu.Unlock()

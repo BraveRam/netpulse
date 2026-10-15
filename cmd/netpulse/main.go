@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BraveRam/netpulse/internal/ui"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/plxor/netpulse/internal/ui"
 )
 
 const version = "1.0.0"
@@ -32,7 +32,7 @@ func main() {
 		fmt.Printf("%s\nVersion: %s\n\nUsage: netpulse [flags]\n\nFlags:\n", banner, version)
 		flag.PrintDefaults()
 		fmt.Println("\nKeybindings:")
-		fmt.Println("  ↑ / ↓ / j / k  Navigate connection rows")
+		fmt.Println("  ↑ / ↓ / j  Navigate connection rows")
 		fmt.Println("  Enter          Inspect highlighted connection telemetry")
 		fmt.Println("  /              Filter by process, PID, IP, domain, port, org, state")
 		fmt.Println("  d              Toggle Live DNS query sniffer pane")

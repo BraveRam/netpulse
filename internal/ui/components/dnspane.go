@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BraveRam/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/ui/theme"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/plxor/netpulse/internal/model"
-	"github.com/plxor/netpulse/internal/ui/theme"
 )
 
 // RenderDNSPane renders the Live DNS Query Sniffer bottom pane.

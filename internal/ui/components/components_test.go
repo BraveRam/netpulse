@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 func TestRenderSparkline(t *testing.T) {

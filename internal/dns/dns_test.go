@@ -1,10 +1,12 @@
 package dns
 
 import (
+	"encoding/binary"
+	"net"
 	"testing"
 	"time"
 
-	"github.com/plxor/netpulse/internal/model"
+	"github.com/BraveRam/netpulse/internal/model"
 )
 
 func TestParseDNSPacketQuery(t *testing.T) {
@@ -68,5 +70,61 @@ func TestRingBuffer(t *testing.T) {
 	}
 	if all[2].Domain != "two.com" {
 		t.Errorf("Expected oldest retained 'two.com', got %s", all[2].Domain)
+	}
+}
+
+func testDNSFrame(response bool, clientPort uint16) []byte {
+	payload := []byte{0x12, 0x34, 0x01, 0, 0, 1, 0, 0, 0, 0, 0, 0, 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0, 0, 1, 0, 1}
+	if response {
+		payload[2] = 0x81
+	}
+	packet := make([]byte, 28+len(payload))
+	packet[0], packet[9] = 0x45, 17
+	binary.BigEndian.PutUint16(packet[2:4], uint16(len(packet)))
+	src, dst, sp, dp := net.ParseIP("192.168.1.2").To4(), net.ParseIP("8.8.8.8").To4(), clientPort, uint16(53)
+	if response {
+		src, dst, sp, dp = dst, src, dp, sp
+	}
+	copy(packet[12:16], src)
+	copy(packet[16:20], dst)
+	binary.BigEndian.PutUint16(packet[20:22], sp)
+	binary.BigEndian.PutUint16(packet[22:24], dp)
+	binary.BigEndian.PutUint16(packet[24:26], uint16(8+len(payload)))
+	copy(packet[28:], payload)
+	return packet
+}
+
+func TestDNSResponseEndpointsAndConcurrentTransactions(t *testing.T) {
+	s := NewSniffer(10)
+	defer s.Stop()
+	s.processPacket(testDNSFrame(false, 40001))
+	s.processPacket(testDNSFrame(false, 40002))
+	if len(s.pendingTimes) != 2 {
+		t.Fatalf("concurrent requests collided: %d pending", len(s.pendingTimes))
+	}
+	// Distinct known ages verify each reply consumes its own timestamp.
+	for k := range s.pendingTimes {
+		age := time.Second
+		if k.clientPort == 40002 {
+			age = 10 * time.Second
+		}
+		s.pendingTimes[k] = time.Now().Add(-age)
+	}
+	for _, port := range []uint16{40001, 40002} {
+		s.processPacket(testDNSFrame(true, port))
+		q := s.GetQueries()[0]
+		if q.ClientIP != "192.168.1.2" || q.ClientPort != int(port) || q.ServerIP != "8.8.8.8" || q.ServerPort != 53 {
+			t.Fatalf("wrong response endpoints: %+v", q)
+		}
+		min, max := time.Second, 5*time.Second
+		if port == 40002 {
+			min, max = 10*time.Second, 15*time.Second
+		}
+		if q.Latency < min || q.Latency >= max {
+			t.Fatalf("wrong transaction latency: %v", q.Latency)
+		}
+	}
+	if len(s.pendingTimes) != 0 {
+		t.Fatal("completed requests remain pending")
 	}
 }
