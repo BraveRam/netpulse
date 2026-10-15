@@ -1,0 +1,16 @@
+bin/
+/netpulse
+
+# OS and Editor files
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# GeoIP Databases
+*.mmdb
+
+# Test artifacts
+coverage.out
